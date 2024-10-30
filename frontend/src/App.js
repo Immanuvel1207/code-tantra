@@ -11,7 +11,7 @@ function App() {
                 <Route path="/question/:id" element={<QuestionDetails />} />
             </Routes>
         </Router>
-    );
+    ); 
 }
 
 export default App;

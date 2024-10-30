@@ -8,12 +8,11 @@ const questionSchema = new mongoose.Schema({
   outputFormat: { type: String, required: true },
   sampleInput: { type: String, required: true },
   sampleOutput: { type: String, required: true },
-  testCases: [
-    {
-      input: String,
-      expectedOutput: String,
-    },
-  ],
+  testCases: [{
+    input: String,
+    expectedOutput: String,
+  }],
+  points: { type: Number, default: 10 }
 });
 
 module.exports = mongoose.model('Question', questionSchema);

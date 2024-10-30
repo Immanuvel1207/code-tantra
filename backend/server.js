@@ -122,8 +122,8 @@ app.post('/run-code', async (req, res) => {
               result = await getResult();
           }
 
-          const actualOutput = (result.stdout || '').trim();
-          const passed = actualOutput === expectedOutput.trim();
+          const actualOutput = (result.stdout || '');
+          const passed = actualOutput === expectedOutput;
 
           // Add result summary for each test case
           results.push({
@@ -146,6 +146,49 @@ app.post('/run-code', async (req, res) => {
       res.status(500).send('Error executing code');
   }
 });
+
+
+const UserSubmission = require('./models/UserSubmission');
+
+// Add new endpoint for submissions
+app.post('/submit-code', async (req, res) => {
+  const { userId, questionId, code, language, testCases, results } = req.body;
+  
+  try {
+    // Calculate score based on passed test cases
+    const totalTestCases = testCases.length;
+    const passedTestCases = results.filter(r => r.passed).length;
+    const scorePerTest = 10 / totalTestCases;
+    const totalScore = passedTestCases * scorePerTest;
+    
+    // Create or update submission
+    const submission = await UserSubmission.findOneAndUpdate(
+      { userId, questionId },
+      {
+        code,
+        language,
+        score: totalScore,
+        completed: passedTestCases === totalTestCases
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ submission });
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Add endpoint to get user submissions
+app.get('/user-submissions/:userId', async (req, res) => {
+  try {
+    const submissions = await UserSubmission.find({ userId: req.params.userId });
+    res.json(submissions);
+  } catch (error) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 
 app.listen(5000, () => console.log('Server started on port 5000'));
