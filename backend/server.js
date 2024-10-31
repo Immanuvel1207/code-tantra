@@ -13,6 +13,7 @@ mongoose.connect('mongodb://localhost:27017/leetcode_clone', {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 });
+const User = require('./models/User'); // Adjust the path if necessary
 
 // Schema
 const questionSchema = new mongoose.Schema({
@@ -67,85 +68,85 @@ app.get('/questions/:id', async (req, res) => {
 const JUDGE0_API_KEY = '8203003cc9msh73efd106e65683dp17af63jsn5c142137ad64';
 const JUDGE0_URL = 'https://judge0-ce.p.rapidapi.com/submissions';
 
+// Run code endpoint
 app.post('/run-code', async (req, res) => {
-  const { code, language, testCases } = req.body;
+    const { code, language, testCases } = req.body;
+    const languageMap = {
+        javascript: 63,
+        python: 71,
+        cpp: 54,
+        java: 62,
+    };
 
-  const languageMap = {
-      javascript: 63, // JavaScript
-      python: 71, // Python
-      cpp: 54, // C++
-      java: 62, // Java
-  };
+    const languageId = languageMap[language];
+    const results = [];
 
-  const languageId = languageMap[language];
-  const results = [];
+    try {
+        for (const testCase of testCases) {
+            const { input, expectedOutput } = testCase;
 
-  try {
-      // Run the code for each test case
-      for (const testCase of testCases) {
-          const { input, output: expectedOutput } = testCase;
+            const { data } = await axios.post(
+                JUDGE0_URL,
+                {
+                    source_code: code,
+                    language_id: languageId,
+                    stdin: input,
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-RapidAPI-Key': JUDGE0_API_KEY,
+                        'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
+                    },
+                }
+            );
 
-          // Submit code to Judge0
-          const { data } = await axios.post(
-              JUDGE0_URL,
-              {
-                  source_code: code,
-                  language_id: languageId,
-                  stdin: input,
-              },
-              {
-                  headers: {
-                      'Content-Type': 'application/json',
-                      'X-RapidAPI-Key': JUDGE0_API_KEY,
-                      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-                  },
-              }
-          );
+            const submissionId = data.token;
 
-          const submissionId = data.token;
+            const getResult = async () => {
+                const { data: result } = await axios.get(`${JUDGE0_URL}/${submissionId}`, {
+                    headers: {
+                        'X-RapidAPI-Key': JUDGE0_API_KEY,
+                        'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
+                    },
+                });
+                return result;
+            };
 
-          // Poll Judge0 for the result
-          const getResult = async () => {
-              const { data: result } = await axios.get(`${JUDGE0_URL}/${submissionId}`, {
-                  headers: {
-                      'X-RapidAPI-Key': '8203003cc9msh73efd106e65683dp17af63jsn5c142137ad64',
-                      'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-                  },
-              });
-              return result;
-          };
+            let result = await getResult();
+            while (result.status.id <= 2) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                result = await getResult();
+            }
 
-          // Wait for the result to be ready
-          let result = await getResult();
-          while (result.status.id <= 2) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              result = await getResult();
-          }
+            const actualOutput = (result.stdout || '').trim(); // Trimming output
+            const passed = actualOutput === expectedOutput.trim(); // Also trim expectedOutput
 
-          const actualOutput = (result.stdout || '');
-          const passed = actualOutput === expectedOutput;
+            results.push({
+                input,
+                expectedOutput,
+                actualOutput,
+                passed,
+            });
+        }
 
-          // Add result summary for each test case
-          results.push({
-              input,
-              expectedOutput,
-              actualOutput,
-              passed,
-          });
-      }
-
-      // Summarize the test results
-      const passedCount = results.filter(result => result.passed).length;
-      res.json({
-          totalTestCases: testCases.length,
-          passedTestCases: passedCount,
-          results,
-      });
-  } catch (error) {
-      console.error('Error executing code:', error);
-      res.status(500).send('Error executing code');
-  }
+        const passedCount = results.filter(result => result.passed).length;
+        res.json({
+            totalTestCases: testCases.length,
+            passedTestCases: passedCount,
+            results,
+        });
+    } catch (error) {
+        console.error('Error executing code:', error.response ? error.response.data : error.message);
+        res.status(500).json({
+            message: 'Error executing code',
+            error: error.response ? error.response.data : error.message,
+        });
+    }
 });
+
+
+
 
 
 const UserSubmission = require('./models/UserSubmission');
@@ -182,12 +183,42 @@ app.post('/submit-code', async (req, res) => {
 // Add endpoint to get user submissions
 app.get('/user-submissions/:userId', async (req, res) => {
   try {
-    const submissions = await UserSubmission.find({ userId: req.params.userId });
+    const userId = mongoose.Types.ObjectId.isValid(req.params.userId)
+      ? req.params.userId
+      : null;
+
+    const submissions = await UserSubmission.find(userId ? { userId } : { userName: req.params.userId });
     res.json(submissions);
   } catch (error) {
-    res.status(500).json({ error: 'Server error' });
+    console.error('Error fetching user submissions:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
+  
+  
+
+
+
+// Example of a login route
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email, password });
+    if (user) {
+      res.json(user);
+    } else {
+      res.status(400).json({ error: 'Invalid credentials' });
+    }
+  });
+  
+  // Example of a register route
+  app.post('/register', async (req, res) => {
+    const { email, password } = req.body;
+    const newUser = new User({ email, password });
+    await newUser.save();
+    res.status(201).json({ message: 'User registered successfully' });
+  });
+  
 
 
 
