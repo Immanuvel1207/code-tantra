@@ -19,25 +19,25 @@ function CodeEditor({ question, userId }) {
       id: 'javascript',
       extension: 'js',
       monacoLanguage: 'javascript',
-      defaultCode: '// Write your JavaScript code here\n\nfunction solution(input) {\n  // Your code here\n}\n'
+      defaultCode: '// Write your JavaScript code here\n'
     },
     python: {
       id: 'python',
       extension: 'py',
       monacoLanguage: 'python',
-      defaultCode: '# Write your Python code here\n\ndef solution(input):\n    # Your code here\n    pass\n'
+      defaultCode: '# Write your Python code here\n'
     },
     cpp: {
       id: 'cpp',
       extension: 'cpp',
       monacoLanguage: 'cpp',
-      defaultCode: '// Write your C++ code here\n\n#include <iostream>\nusing namespace std;\n\nint solution() {\n    // Your code here\n    return 0;\n}\n'
+      defaultCode: '// Write your C++ code here\n'
     },
     java: {
       id: 'java',
       extension: 'java',
       monacoLanguage: 'java',
-      defaultCode: '// Write your Java code here\n\nclass Solution {\n    public static void main(String[] args) {\n        // Your code here\n    }\n}\n'
+      defaultCode: '// Write your Java code here\n\nclass Main {\n    public static void main(String[] args) {\n        // Your code here\n    }\n}\n'
     }
   };
 

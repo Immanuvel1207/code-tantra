@@ -213,10 +213,15 @@ app.post('/login', async (req, res) => {
   
   // Example of a register route
   app.post('/register', async (req, res) => {
-    const { email, password } = req.body;
-    const newUser = new User({ email, password });
-    await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
+    const { username, email, password } = req.body;
+    
+    try {
+      const newUser = new User({ username, email, password });
+      await newUser.save();
+      res.status(201).json({ success: true, message: 'User registered successfully' });
+    } catch (error) {
+      res.status(400).json({ success: false, message: error.message });
+    }
   });
   
 
